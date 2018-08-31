@@ -5,6 +5,8 @@ import React, { Component } from 'react';
 import Auxs from '../../hoc/Auxs';
 import Burger from '../../components/Burger/Burger';
 import BuildControls from '../../components/Burger/BuildControls/BuildControls';
+import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
+import Modal from '../../components/UI/Modal/Modal';
 
 const GREDIENT_PRICES = {
     salad: 0.5,
@@ -23,31 +25,52 @@ class BurgerBuilder extends Component {
                 cheese: 0,
                 meat: 0
             },
-            totalPrice: 4
+            totalPrice: 4,
+            purchaseable: false,
+            purchasing: false
         };
+    }
+
+    updatePurchaseSate = (ingredients) => {
+        const sum = Object.keys(ingredients)
+            .map(igKey => {
+               return ingredients[igKey]
+            })
+            .reduce((sum, el) => {
+                sum += el;
+                return sum;
+            }, 0);
+        this.setState({purchaseable: sum > 0});
+
     }
 
     addIngredientHandler = (type) => {
-        const newCount = this.state.ingredients[type] + 1;
-        //update state in immutable way
-        const updatedIngredients = {
-            ...this.state.ingredients
-        };
-        updatedIngredients[type] = newCount;
-        const newPrice = this.state.totalPrice + GREDIENT_PRICES[type];
-        this.setState({totalPrice: newPrice, ingredients: updatedIngredients});
+        this.updateGredients(type, 1);
     }
 
     removeIngredientHandler = (type) => {
-        let newCount = this.state.ingredients[type] - 1;
+        this.updateGredients(type, -1);
+    }
+
+    purchaseHandler = () => {
+        this.setState({purchasing: true});
+    }
+
+    updateGredients = (type, factor) => {
+        let newCount = this.state.ingredients[type] + factor*1;
         newCount = newCount > 0 ? newCount:0;
         //update state in immutable way
         const updatedIngredients = {
             ...this.state.ingredients
         };
         updatedIngredients[type] = newCount;
-        const newPrice = this.state.totalPrice - GREDIENT_PRICES[type];
+        const newPrice = this.state.totalPrice + factor*GREDIENT_PRICES[type];
         this.setState({totalPrice: newPrice, ingredients: updatedIngredients});
+        this.updatePurchaseSate(updatedIngredients);
+    }
+
+    purchaseCancelHandler = () => {
+        this.setState({purchasing: false});
     }
 
     render() {
@@ -61,12 +84,17 @@ class BurgerBuilder extends Component {
 
         return (
             <Auxs>
+                <Modal show={this.state.purchasing} modalClosed={this.purchaseCancelHandler} >
+                    <OrderSummary ingredients={this.state.ingredients} />
+                </Modal>
                 <Burger ingredients = {this.state.ingredients}/>
                 <BuildControls
                     ingredientAdded={this.addIngredientHandler}
                     ingredientRemoved={this.removeIngredientHandler}
                     disabled={disabledInfo}
+                    purchaseable={this.state.purchaseable}
                     price={this.state.totalPrice}
+                    ordered={this.purchaseHandler}
                 />
             </Auxs>
         );
